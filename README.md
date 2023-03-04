@@ -31,13 +31,9 @@ Modules can be defined in two ways.
 1. Make a CL source file, the name of the module is the name of the file:
 ```julia
 # foo.cl
-use bar;
-
-# bar.cl
-hello = fn {
-	println!("hello world!");
-};
+use bar;	# bar.cl
 ```
+
 1. Declare and define inside the parent module:
 ```julia
 # foo.cl
@@ -52,12 +48,41 @@ To access a member of a module, you use the scope resolution operator `::`:
 
 ```julia
 mod foo {
-	const bar = "hello world!";
+	pub const bar = "hello world!";
 }
 
 hello = fn {
 	println!(foo::bar);
 }
+```
+
+If the name of a module is not in scope, you can locate it using an *anchor* for the resolution operator:
+- `self::foo`: used to capture module variables, because capturing is explicit.
+- `::foo`: absolute path, from package root. If you don't have a package configured, this is the entry point.
+- `super::foo`: relative to parent, can be stacked: `super::super::foo`.
+
+Importing a module or package is quite easy
+```julia
+# brings module package into the hierarchy
+use package;	
+
+# now we can access it as usual
+package::foo;
+```
+
+You can also import sub-modules
+```julia
+use alpha::bravo::charlie;
+
+# now the module charlie is in scope
+charlie::foo;
+```
+
+Module resolution can never be omitted, but it might get tiring to write out the module name every time, in these cases we can alias an imported module:
+
+```julia
+use very_long_module_name as short;l
+short::foo;
 ```
 
 ### Variables and storage modifiers
@@ -92,30 +117,25 @@ const i_am_constant = 1;
 const i_am_constant = input!(u16);
 ```
 
-By default, variables are only accessible from within a module and from the direct ancestors of the module:
+By default, variables are *private*, meaning they cannot be accessed from outside:
 
 ```
 mod foo {
 	bar: u8 = 42;
 };
 
-# this is ok
+# this is illegal
 main = fn {
 	println!(foo::bar);
 };
 ```
 
-```
-bar: u8 = 42;
+You can change this behaviour with the `pub` and `protected`
+- `pub` makes the variable accessible from outside the hierarchy
+- `protected` makes the variable accessible only from direct ancestors
 
-# this won't compile
-mod foo {
-	println!(::bar);
-};
-```
 
-You can change this behaviour with the `pub`, `internal` and `hidden` modifiers.
-- `pub` makes the variable public, which means it is visible from any module, usually this is used for library functions.
-- `internal` makes the variable visible from anywhere within the same module tree as the variable.
-- `hidden` completely hides the variable, also from ancestor modules.
+### Algebraic types
+
+
 

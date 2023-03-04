@@ -135,7 +135,70 @@ You can change this behaviour with the `pub` and `protected`
 - `protected` makes the variable accessible only from direct ancestors
 
 
+## Type system
+
+The typing system is statically and strongly typed, and uses algebraic types.
+
+There are several built-in types:
+- Atomic types:
+  - Never: `never`
+  - Nothing/null: `nil`
+  - Unsigned integers: `u8`, `u16`, `u32`, `u64`, `ubig`
+  - Signed ingegers: `i8`, `i16`, `i32`, `i64`, `ibig`
+  - Floating point: `f16`, `f32`, `f64`
+  - UTF-8 character: `char`
+  - UTF-8 string: `str`
+- Collections:
+  - List: e.g.: `list(u8)` or `[u8]`
+  - Array: e.g.: `array(u8, 10)` or `[u8; 10]`
+  - Tuples: e.g.: `tuple(u8, str, i16)` or `(u8, str, i16)`
+  - Dictionaries: e.g.: `dict(str, u16)` or `{str, u16}`
+
+### Literals
+
+
+
+Ingegers:
+```julia
+42;
++42;
+-42;
+100_000_000;	# digit separators
+0xff_ff_ff;	# hexadecimal
+0b0000_0000;	# binary
+```
+
+Floats:
+```julia
+3.14;
++3.14;
+-3.14;
+.5;
+5.;
+3.14E-10;
+```
+
+Strings:
+```julia
+"this string supports interpolation and escaping, e.g.: \"{2 + 3}\""
+'this string does not use escaping and interpolation'
+```
+
 ### Algebraic types
 
+You can define custom types by using algebraic types.
+
+The simplest type is the `never` type. The `never` type has no values and can never be instantiated. This is only useful to represent functions that will terminate the program and thus will never terminate.
+```
+# this will not compile, there is no value you can assign to a varaible of type never
+foo: never = 42;
+```
+
+The second simples type is the `n
 
 
+## Cool stuff
+
+### Efficient regexes
+
+Literal regexes are compiled at compile time, 

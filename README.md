@@ -21,11 +21,23 @@ I was playing around with making a compiler in Rust and in Python and was frustr
 
 Similarly, I was also playing around with Ruby, which has great tools for string processing, but again, I was frustrated by its object passing semantics. I wanted an elegant and simple language like Python or Ruby, but with clear copy/reference semantics.
 
-## Syntax
-
 The syntax is inspired by Rust, Ruby, OCaml and Julia.
 
-### Modules
+## Identifiers
+
+Identifiers have the form `[a-zA-Z_][a-zA-Z0-9_]*` but they follow some style rules that can optionally be enforced (with pedantic warnings):
+
+- Modules: `snake_case`
+- Variables: `snake_case`
+- Functions `snake_case`
+- Types: `PascalCase`
+- Constants: `SCREAMING_CASE`
+
+There are also some special identifiers:
+
+- Procedure: `snake_case!`
+
+## Modules
 
 Modules can be defined in two ways.
 1. Make a CL source file, the name of the module is the name of the file:
@@ -38,7 +50,7 @@ use bar;	# bar.cl
 ```julia
 # foo.cl
 mod bar {
-	hello = fn {
+	hello: fn = {
 		println!("hello world!");
 	}
 }
@@ -87,7 +99,7 @@ short::foo;
 
 Note that if two modules import the same module, two independent instances of the module are created. You can use the `global` storage modifier to make variables shared across all instances of a module.
 
-### Variables and storage modifiers
+## Variables and storage modifiers
 
 Most constructs in CL are stored in variables, including functions
 
@@ -152,15 +164,18 @@ There are several built-in types:
   - Floating point: `f16`, `f32`, `f64`
   - UTF-8 character: `char`
   - UTF-8 string: `str`
-- Collections:
+  - Regex pattern: `rxp`
+  - Type: `type`
+  - Function/procedure: `fn`
+- Data structures (sum types):
   - List: e.g.: `list(u8)` or `[u8]`
   - Tuple: e.g.: `tuple(u8, u8)` or `(u8, u8)` or `(a: u8, b: u8)`
-  - Array: e.g.: `array(u8, 10)` or `[u8; 10]`
-  - Dictionaries: e.g.: `dict(str, u16)` or `{str, u16}`
+  - Array: e.g.: `array(u8, 10)`
+  - Dictionaries: e.g.: `dict(str, u16)`
+- Pointers:
+  - Reference: e.g.: `ref(u8)`
 
 ### Literals
-
-
 
 Ingegers:
 ```julia
@@ -189,7 +204,9 @@ Strings:
 ```
 
 Misc:
-- `nil`: `nil`
+- Null/nothing: `nil`
+- Function: 
+  - `(a: u8, b: u8 = 5) -> (u8, u8) { ... }`
 
 ### Algebraic types
 
@@ -201,49 +218,162 @@ The general syntax for defining a type is:
 <name>: type = <type_constructor_expression>
 ```
 
-The simplest type you can define is a *nullary* type, which has no value:
+The simplest type you can define is a *unit* type, which has a single variant with no value:
 
 ```julia
-Foo: type = Foo;
-Bar: foo = Foo;
-
-# the type expression may use a different name than the type,
-# this is discouraged as it is confusing in most cases.
-Alpha: type = Beta;
-Gamma: Alpha = Beta;
+Foo: type = ();
 ```
 
-Usually you will use the built-in nullary type `nil`, which you could model as:
+Usually you will use the built-in unit type `nil`, which you could model as:
 
 ```julia
-nil: type = nil;
+nil: type = ();
 ```
 
-The `nil` that appears on the right hand side of the equals sign is called a *type constructor*. Type constructors can also take arguments. These are called *tuples*, *structs* or *product types* in other languages:
+The next simplest type is a *unary* type. A unary type is like an alias for another type:
 
 ```julia
-Foo: type = Foo(u8, u8, u8);		# unnamed
-Bar: type = Bar(a: u8, b: u8, c: u8);	# named
-Baz: type = Baz(u8, u8, kwarg: u8);	# mixed (args, kwargs style)
-Qux: type = Qux(a: u8 = 1);		# default value
+LongInt: type = i64;
 ```
 
-You can have multiple type constructors, using the `|` (pipe) operator. This is often called an *enum* or a *sum type* in other languages. Each constructor is called a *variant* of the type:
+You can also create types that combines multiple other types. This is often called a *struct*, *tuple* or *product type* in other languages:
 
 ```julia
-Color: type = Red | Green | Blue;
+Point2D: type = (f32, f32);
+Point3D: type = (x: f32 = 5.2, y: f32, z: f32 = 3.2);	# named and with defaults
+Bytes: type = [u8];
+Buffer: type = array(u8, 128);
+Translations: type = dict(str, str);
 ```
 
-You don't need to define type constructors, you can also combine existing types:
+You can make a type with multiple *variants* with the `|` (pipe) operator. This is often called an *enum* or a *sum type* in other languages:
 
 ```julia
-Point: type = (u8, u8);
-Translations: type = {str, str};
+SomeResult: type = Ok | Err(str);
 ```
 
+### Type inference (`auto` and `type`)
 
+The special type `auto` can be used to explicitly request type inference.
+
+```julia
+foo: auto = 3.2 + 3.3;
+```
+
+You can limit the allowed types by using arguments:
+
+```julia
+foo: auto(i8, i16) = bar;
+```
+
+This is especially useful for defining generic functions:
+
+```julia
+Real: type = auto(f16, f32, f64);
+mul_add: fn = (a: Real, b: type(a), c: type(a)) -> type(a) {
+	return a * b + c;
+};
+```
+
+Here the `type(a)` is a type constructor that takes a variable and evaluates to the type of that variable at compile time, here it is used to force all arguments to have the same type as the first.
+
+## Pattern matching
+
+Sum types can be matched with pattern matching:
+
+```julia
+Color: type
+	= RGBA(u8,u8,u8,u8)
+	| HEX(u32)
+
+a: Color = RGB(0xfedf0000);
+match a {
+	case RGBA(r,g,b,a) {
+		# something
+	},
+	case HEX(hex) {
+		# something
+	}
+};
+```
+
+Pattern matching is an expression:
+
+```julia
+foo: auto = match bar {
+	case A(a) {
+		return a;
+	},
+	case B(b) {
+		return b;
+	},
+}
+	
+
+	
+
+
+
+## Functions and procedures
+
+The distinction between functions and procedures is that functions have no side effects, whereas procedures do. Functions and procedures are variables of the `fn` type. Procedures have a `!` at the end of their identifier.
+
+```julia
+increment: fn (a: u8) -> u8 = {
+	return a + 1;
+};
+
+mut counter: u8 = 0;
+increment! : fn (a: ref(u8)) -> () = {
+	a += 1;
+};
+```
+
+Functions can capture their environmnet, by using the `self::` anchor:
+
+```julia
+mut counter: u8 = 0;
+increment! : fn = {
+	self::counter += 1;
+};
+```
+
+Functions allow partial application and currying:
+
+```julia
+foo: fn (a: f32, b: f32, c: f32) -> f32 = {
+	return a + b + c;
+};
+
+bar: auto = foo(1.0,,3.0);
+println!(type(bar));
+# fn (b: f32) -> f32
+
+baz: auto = foo(1.0)(2.0);
+println!(type(baz));
+# fn (c: f32) -> f32
+```
+
+Functions can be passed to other functions:
+
+```julia
+foo: fn (a: fn f32 -> f32) -> f32 = {
+	return a(1.0);
+};
+```
+
+Functions can be chained by using the `.` (dot) operator, which applies the function on the right to the variable on the left.
+
+```
+a: f32 = [1.0, 2.0, 3.0]
+	.iter
+       	.map(fn (a: f32) -> f32 { return a * 2.0; })
+	.fold(+);
+```
 
 ## Cool stuff
+
+
 
 ### Efficient regexes
 

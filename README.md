@@ -308,11 +308,26 @@ foo: auto = match bar {
 		return b;
 	},
 }
-	
+```
 
-	
+Pattern matching can also use regular expressions:
 
+```julia
+a: str = input!;
 
+Number: type
+	= Int(u64)
+	| Float(f64);
+
+b: Number = match a {
+	case rxp('(\d+)') {
+		return Int(u64($1));
+	},
+	case rxp('(\d+.\d+)') {
+		return Float(f64($1));
+	},
+};
+```
 
 ## Functions and procedures
 
@@ -372,8 +387,6 @@ a: f32 = [1.0, 2.0, 3.0]
 ```
 
 ## Cool stuff
-
-
 
 ### Efficient regexes
 

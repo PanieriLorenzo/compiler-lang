@@ -1,0 +1,12 @@
+@startebnf
+source = ?SOF?, block_body, ?EOF?;
+block_body = {statement};
+statement = (mod_declaration | use_declaration | variable_declaration | variable_assignment), ";";
+mod_declaration = "mod", identifier, block;
+block = "{", block_body, "}";
+use_declaration = "use", use_tree;
+use_tree = simple_path, ["as", identifier]
+         | simple_path, "::", "{", use_tree, { ",", use_tree }, [","], "}";
+variable_declaration = identifier, ":", type, "=", expression;
+variable_assigment = identifier, "=", expression;
+@endebnf

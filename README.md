@@ -379,12 +379,29 @@ foo: fn (a: fn f32 -> f32) -> f32 = {
 
 Functions can be chained by using the `.` (dot) operator, which applies the function on the right to the variable on the left.
 
-```
+```julia
 a: f32 = [1.0, 2.0, 3.0]
 	.iter
        	.map(fn (a: f32) -> f32 { return a * 2.0; })
 	.fold(+);
 ```
+
+Functions can be overloaded, if multiple definitions match the arguments, the most specific wins.
+
+```julia
+mul_add: (a: auto, b: auto, c: auto) -> auto = {
+	return a * b + c;
+};
+mul_add: (a: str, b: str, c: str) -> str = {
+	return a.repeat(b).concat(c);
+};
+```
+
+Note that this syntax is allowed for all variables, but it is discouraged.
+
+## Built-ins
+
+
 
 ## Cool stuff
 

@@ -270,12 +270,14 @@ This is especially useful for defining generic functions:
 
 ```julia
 Real: type = auto(f16, f32, f64);
-mul_add: fn = (a: Real, b: type(a), c: type(a)) -> type(a) {
+mul_add: (a: Real, b: type(a), c: type(a)) -> type(a) = {
 	return a * b + c;
 };
 ```
 
 Here the `type(a)` is a type constructor that takes a variable and evaluates to the type of that variable at compile time, here it is used to force all arguments to have the same type as the first.
+
+Note that a function with an `auto` return type cannot have multiple `return` statements with different types. If you need that, use a sum type.
 
 ## Pattern matching
 
@@ -381,7 +383,6 @@ Functions can be chained by using the `.` (dot) operator, which applies the func
 
 ```julia
 a: f32 = [1.0, 2.0, 3.0]
-	.iter
        	.map(fn (a: f32) -> f32 { return a * 2.0; })
 	.fold(+);
 ```
@@ -399,11 +400,66 @@ mul_add: (a: str, b: str, c: str) -> str = {
 
 Note that this syntax is allowed for all variables, but it is discouraged.
 
-## Built-ins
+Operators are special functions, which can be overloaded for custom types. For example, these are some implementations from the standard library:
 
+```julia
++: (a: Number, b: type(a)) -> type(a) = {
+	return a.__add(b);
+};
++: (a: str, b: str) -> str = {
+	return a.concat(b);
+};
+```
 
+## Flow control
+
+All flow control is an expression. If you have multiple statements, and you omit the `;` from the last one, that is the value that is returned.
+
+```julia
+a: i32 = if x == 0 { 1 } else { 2 };
+```
+
+### If
+
+```julia
+if <condition> { <block> };
+if <condition> { <block> } else { <block> };
+```
+
+Note that if you omit the `else` clause, it's like implying an `else{ nil }`.
+
+### Loops
+
+```julia
+for <var> in <collection> { <block> };
+loop { <block> };
+```
+
+The final expression in the loop is returned on the last iteration.
+
+You can use the `break` statement to return early. `break` optionally takes an argument, which is returned.
+
+For loops support pattern matching:
+
+```
+for (r,g,b) in colors { ... };
+```
 
 ## Cool stuff
+
+### Regexes are a first-class type
+
+They even have special syntax:
+
+```julia
+foo: i32 = match a {
+	case /foo=(\d++)/ {
+		return i32.from_str($1);
+	},
+};
+```
+
+The special `$0`, `$1`, ... variables are available within match arms to access capturing groups. You can even used named groups with `$name`.
 
 ### Efficient regexes
 

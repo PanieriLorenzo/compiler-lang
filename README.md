@@ -32,6 +32,8 @@ Identifiers have the form `[a-zA-Z_][a-zA-Z0-9_]*` but they follow some style ru
 - Functions `snake_case`
 - Types: `PascalCase`
 - Constants: `SCREAMING_CASE`
+- Implementation specific (usually `private` or `protected`): `_identifier`
+- Compiler internals: `__identifier`
 
 There are also some special identifiers:
 

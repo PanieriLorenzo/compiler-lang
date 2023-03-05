@@ -61,7 +61,7 @@ If the name of a module is not in scope, you can locate it using an *anchor* for
 - `::foo`: absolute path, from package root. If you don't have a package configured, this is the entry point.
 - `super::foo`: relative to parent, can be stacked: `super::super::foo`.
 
-Importing a module or package is quite easy
+Importing a module is quite easy
 ```julia
 # brings module package into the hierarchy
 use package;	
@@ -81,9 +81,11 @@ charlie::foo;
 Module resolution can never be omitted, but it might get tiring to write out the module name every time, in these cases we can alias an imported module:
 
 ```julia
-use very_long_module_name as short;l
+use very_long_module_name as short;
 short::foo;
 ```
+
+Note that if two modules import the same module, two independent instances of the module are created. You can use the `global` storage modifier to make variables shared across all instances of a module.
 
 ### Variables and storage modifiers
 
@@ -130,9 +132,10 @@ main = fn {
 };
 ```
 
-You can change this behaviour with the `pub` and `protected`
+You can change this behaviour with the `pub`, `protected` and `global`
 - `pub` makes the variable accessible from outside the hierarchy
 - `protected` makes the variable accessible only from direct ancestors
+- `global` makes the variable be shared across all instances of the module.
 
 
 ## Type system
@@ -145,13 +148,14 @@ There are several built-in types:
   - Nothing/null: `nil`
   - Unsigned integers: `u8`, `u16`, `u32`, `u64`, `ubig`
   - Signed ingegers: `i8`, `i16`, `i32`, `i64`, `ibig`
+  - Booleans: `bool`
   - Floating point: `f16`, `f32`, `f64`
   - UTF-8 character: `char`
   - UTF-8 string: `str`
 - Collections:
   - List: e.g.: `list(u8)` or `[u8]`
+  - Tuple: e.g.: `tuple(u8, u8)` or `(u8, u8)` or `(a: u8, b: u8)`
   - Array: e.g.: `array(u8, 10)` or `[u8; 10]`
-  - Tuples: e.g.: `tuple(u8, str, i16)` or `(u8, str, i16)`
   - Dictionaries: e.g.: `dict(str, u16)` or `{str, u16}`
 
 ### Literals
@@ -184,21 +188,63 @@ Strings:
 'this string does not use escaping and interpolation'
 ```
 
+Misc:
+- `nil`: `nil`
+
 ### Algebraic types
 
 You can define custom types by using algebraic types.
 
-The simplest type is the `never` type. The `never` type has no values and can never be instantiated. This is only useful to represent functions that will terminate the program and thus will never terminate.
-```
-# this will not compile, there is no value you can assign to a varaible of type never
-foo: never = 42;
+The general syntax for defining a type is:
+
+```julia
+<name>: type = <type_constructor_expression>
 ```
 
-The second simples type is the `n
+The simplest type you can define is a *nullary* type, which has no value:
+
+```julia
+Foo: type = Foo;
+Bar: foo = Foo;
+
+# the type expression may use a different name than the type,
+# this is discouraged as it is confusing in most cases.
+Alpha: type = Beta;
+Gamma: Alpha = Beta;
+```
+
+Usually you will use the built-in nullary type `nil`, which you could model as:
+
+```julia
+nil: type = nil;
+```
+
+The `nil` that appears on the right hand side of the equals sign is called a *type constructor*. Type constructors can also take arguments. These are called *tuples*, *structs* or *product types* in other languages:
+
+```julia
+Foo: type = Foo(u8, u8, u8);		# unnamed
+Bar: type = Bar(a: u8, b: u8, c: u8);	# named
+Baz: type = Baz(u8, u8, kwarg: u8);	# mixed (args, kwargs style)
+Qux: type = Qux(a: u8 = 1);		# default value
+```
+
+You can have multiple type constructors, using the `|` (pipe) operator. This is often called an *enum* or a *sum type* in other languages. Each constructor is called a *variant* of the type:
+
+```julia
+Color: type = Red | Green | Blue;
+```
+
+You don't need to define type constructors, you can also combine existing types:
+
+```julia
+Point: type = (u8, u8);
+Translations: type = {str, str};
+```
+
 
 
 ## Cool stuff
 
 ### Efficient regexes
 
-Literal regexes are compiled at compile time, 
+- Literal and `const` regexes are compiled at compile time, if you want to be sure, use the `const` modifier.
